@@ -9,12 +9,9 @@ import seaborn as sns
 import warnings
 import pandas as pd
 from fpdf import FPDF
-import cairosvg
-from IPython.display import SVG, display
 import math
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
-from fpdf import FPDF
 from PIL import Image
 from intervaltree import Interval, IntervalTree
 # Import necessary functions from CloseRead_plot.py

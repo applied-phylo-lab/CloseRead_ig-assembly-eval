@@ -17,6 +17,9 @@ setup(
         ],
     },
     include_package_data=True,
+    package_data={
+        "closeread": ["scripts/*.sh"],
+    },   
     python_requires=">=3.10",  # Enforce Python 3.10
     classifiers=[
         "Programming Language :: Python :: 3",
