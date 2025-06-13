@@ -18,3 +18,4 @@ dependencies:
   - pysam
   - pbtk
   - fpdf
+  - intervaltree
