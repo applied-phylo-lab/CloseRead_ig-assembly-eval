@@ -183,7 +183,7 @@ def run_plot(args):
                                     high_mismatch_bool_pri.size, start_break_pri, end_break_pri, 
                                     chr1_color, chr1, gene, dirOut, cm, min_position_pri, max_position_pri)
                 if not haploid:
-                    plot_mismatch_coverage(alt_pileup, bin_count, positions_alt, start_indices_alt, end_indices_alt, 
+                    plot_mismatch_coverage(alt_pileup, alt_bin_count, positions_alt, start_indices_alt, end_indices_alt, 
                                     high_mismatch_bool_alt.size, start_break_alt, end_break_alt, 
                                     chr2_color, chr2, gene, dirOut, cm, min_position_alt, max_position_alt)
     
