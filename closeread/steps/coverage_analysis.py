@@ -1,12 +1,11 @@
 import subprocess
 import os
 from datetime import datetime
+import logging
+logger = logging.getLogger(__name__)
 
 def coverage_analysis(species, home, annotation):
     """Run coverage analysis."""
-    # Define the log file path
-    log_file = os.path.join(home, "logs", f"{species}_coverage_analysis.log")
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
     # Define input paths and directories
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -17,28 +16,31 @@ def coverage_analysis(species, home, annotation):
     error_dir = os.path.join(home, "errorStats", species)
     os.makedirs(error_dir, exist_ok=True)
 
-    with open(log_file, "w") as log:
-        try:
-            # Log the start of the process
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Starting coverage analysis for species: {species}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - BAM file: {bam}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Annotation file: {annotation}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - errorStats directory: {error_dir}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Running script: {script} -s {species} -a {assembly} -b {bam} -f {annotation} -d {home}\n")
-            log.flush()
-            # Run the script
-            subprocess.run(
-                f"{script} -s {species} -a {assembly} -b {bam} -f {annotation} -d {home}",
-                stdout=log,
-                stderr=log,
-                shell=True,
-                check=True,
-            )
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Coverage analysis completed successfully for species: {species}\n")
-            log.flush()
-        except subprocess.CalledProcessError as e:
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Error during coverage analysis: {e}\n")
-            raise RuntimeError(f"Failed to complete coverage analysis for species {species}. Check the log: {log_file}") from e
+    try:
+        # Log the start of the process
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Starting base-oriented analysis for species: {species}")
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Annotation file: {annotation}")
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - errorStats directory: {error_dir}")
+        # Run the script
+        res = subprocess.run(
+            f"{script} -s {species} -a {assembly} -b {bam} -f {annotation} -d {home}",
+            text=True,
+            capture_output=True,
+            shell=True,
+            check=True
+        )
+        if res.stdout:
+            logger.info("[base-oriented analysis stdout]\n%s", res.stdout.strip())
+        if res.stderr:
+            logger.info("[base-oriented analysis stderr]\n%s", res.stderr.strip())
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - base-oriented analysis completed successfully for species: {species}")
+    except subprocess.CalledProcessError as e:
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Error during base-oriented analysis: {e}")
+        if e.stdout:
+            logger.error("[base-oriented analysis stdout]\n%s", e.stdout.strip())
+        if e.stderr:
+            logger.error("[base-oriented analysis stderr]\n%s", e.stderr.strip())
+        raise RuntimeError(f"Failed to complete base-oriented analysis for species {species}.") from e
 
 
 if __name__ == "__main__":
