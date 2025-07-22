@@ -39,7 +39,7 @@ def coverage_analysis(species, home, annotation):
         if e.stdout:
             logger.error("[base-oriented analysis stdout]\n%s", e.stdout.strip())
         if e.stderr:
-            logger.error("[base-oriented analysisstderr]\n%s", e.stderr.strip())
+            logger.error("[base-oriented analysis stderr]\n%s", e.stderr.strip())
         raise RuntimeError(f"Failed to complete base-oriented analysis for species {species}.") from e
 
 
