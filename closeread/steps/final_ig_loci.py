@@ -1,12 +1,13 @@
 import subprocess
 import os
 from datetime import datetime
+import logging
+logger = logging.getLogger(__name__)
 
 def final_ig_loci(species, home):
     """Process loci into final IG loci."""
     # Define the log file path
-    log_file = os.path.join(home, "logs", f"{species}_final_ig_loci.log")
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+
     output_dir = os.path.join(home, "gene_position")
     os.makedirs(output_dir, exist_ok=True)
 
@@ -16,27 +17,27 @@ def final_ig_loci(species, home):
     script = os.path.join(parent_dir, "scripts/finalGene.py")
     output = os.path.join(home, "gene_position", f"{species}.final.Ig_loci.txt")
 
-    with open(log_file, "w") as log:
-        try:
-            # Log start of the process
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Starting final IG loci processing for species: {species}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Output file: {output}\n")
+    try:
+        # Log start of the process
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Starting final IG loci processing for species: {species}")
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Output file: {output}")
 
-            # Check if output exists
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Running script: python {script} {species} {home}\n")
-            log.flush()
-            subprocess.run(
-                ["python", script, species, home],
-                stdout=log,
-                stderr=log,
-                check=True,
-            )
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Final IG loci generated for {species}.\n")
+        subprocess.run(
+            ["python", script, species, home],
+            text=True,
+            capture_output=True,
+            check=True
+        )
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Final IG loci generated for {species}.")
 
 
-        except subprocess.CalledProcessError as e:
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Error during IG loci processing: {e}\n")
-            raise RuntimeError(f"Failed to process final IG loci for species {species}. Check the log: {log_file}") from e
+    except subprocess.CalledProcessError as e:
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Error during IG loci processing: {e}")
+        if e.stdout:
+            logger.error("[IG loci position compute stdout]\n%s", e.stdout.strip())
+        if e.stderr:
+            logger.error("[IG loci position compute stderr]\n%s", e.stderr.strip())
+        raise RuntimeError(f"Failed to process final IG loci for species {species}.") from e
 
 
 if __name__ == "__main__":

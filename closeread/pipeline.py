@@ -10,6 +10,10 @@ from .steps.cigar_processing import cigar_processing
 from .steps.coverage_analysis import coverage_analysis
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+from . import logging_config
+from .logging_config import setup_global_logging
+
+logger = logging.getLogger(__name__)
 
 def resolve_path(path):
     return os.path.abspath(os.path.expanduser(path))
@@ -17,7 +21,7 @@ def resolve_path(path):
 def run_pipeline_cli():
     parser = argparse.ArgumentParser(description="Run the CloseRead pipeline.")
     parser.add_argument("--species", required=True, help="Comma-separated list of species (e.g., species1,species2).")
-    parser.add_argument("--home", required=True, type=resolve_path, help="Path to the home directory.")
+    parser.add_argument("--home", required=True, type=resolve_path, help="Path to the working directory.")
     parser.add_argument("--haploid", required=True, help="Haploid status (True or False).")
     parser.add_argument("--fastqdir", required=True, type=str, help="Path to the FASTQ directory.")
     parser.add_argument("--t", required=False, default=32, type=int, help="# of threads to use (default: 32).")
@@ -30,22 +34,10 @@ def run_pipeline_cli():
     run_pipeline(args)
 
 
-def configure_logging(home):
-    """Configure logging for the pipeline."""
-    log_dir = os.path.join(home, "logs")
-    os.makedirs(log_dir, exist_ok=True)  # Create the logs directory if it doesn't exist
-
-    logging.basicConfig(
-        filename=os.path.join(log_dir, f"pipeline.log"),
-        filemode="w",  # Overwrite log file each run
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-    )
-    logging.info(f"Logging initialized. Logs will be written to {os.path.join(log_dir, 'pipeline.log')}")
-
 def parallel_step_1_and_2(species, home, fastqdir, haploid, threads, igdetective_home=None):
     output_bam = os.path.join(home, "aligned_bam", species, f"{species}_merged_sorted.bam")
     output_index = f"{output_bam}.csi"
+    igdetective_output = os.path.join(home, "igGene", f"{species}.pri.igdetective", "combined_genes_IGL.txt")
     run_flag = False
     if not os.path.exists(output_bam) or not os.path.exists(output_index):
         run_flag = True
@@ -55,22 +47,24 @@ def parallel_step_1_and_2(species, home, fastqdir, haploid, threads, igdetective
     def step_1():
         if not os.path.exists(output_bam) or not os.path.exists(output_index):
             try:
-                logging.info(f"Step 1: Data Preparation for {species}")
+                logger.info(f"Step 1: Data Preparation for {species}")
                 data_prep(species, home, fastqdir, haploid, str(threads))
             except Exception as e:
-                logging.error(f"Step 1 failed: {e}")
+                logger.error(f"Step 1 failed: {e}")
+                sys.exit(1)
         else:
-            logging.info(f"Step 1: Output exists, skipping Data Preparation for {species} because it's already completed.")        
+            logger.info(f"Skipping Step 1: Output exists for {species}. If rerun is needed, delete {output_bam} and {output_index}.")        
 
     def step_2():
-        if igdetective_home:  # Only run Step 2 if igdetective_home is provided
+        if igdetective_home and not os.path.exists(igdetective_output):  # Only run Step 2 if igdetective_home is provided and output files incomplete
             try:
-                logging.info(f"Step 2: Loci Location for {species}")
+                logger.info(f"Step 2: IgDetective for {species}")
                 loci_location(species, home, haploid, igdetective_home)
             except Exception as e:
-                logging.error(f"Step 2 failed: {e}")
+                logger.error(f"Step 2 failed: {e}")
+                sys.exit(1)
         else:
-            logging.info(f"Skipping Step 2: No IGDetective home provided.")
+            logger.info(f"Skipping Step 2 IgDetective: output exist or custom IG file provided. If rerun is needed, delete {home}/igGene/{species}.pri.igdetective")
 
     # Execute steps in parallel
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -81,29 +75,26 @@ def parallel_step_1_and_2(species, home, fastqdir, haploid, threads, igdetective
 def process_steps_in_parallel(species, home, annotation):
     with ThreadPoolExecutor(max_workers=2) as executor:
         # Submit Step 5 and Step 6 as tasks to the thread pool
+        logger.info(f"Step 5: (base-oriented analysis) for {species}")
+        future_coverage = executor.submit(coverage_analysis, species, home, annotation)
+
+        # Submit Step 6 as a task to the thread pool
+        logger.info(f"Step 6: (read-oriented analysis) for {species}")
+        future_cigar = executor.submit(cigar_processing, species, home, annotation)
+
         try:
-            # Submit Step 5 as a task to the thread pool
-            future_coverage = executor.submit(coverage_analysis, species, home, annotation)
-        except Exception as e:
-            logging.error(f"Step 5 (coverage analysis) submission failed: {e}")
-        
-        try:
-            # Submit Step 6 as a task to the thread pool
-            future_cigar = executor.submit(cigar_processing, species, home, annotation)
-        except Exception as e:
-            logging.error(f"Step 6 (CIGAR processing) submission failed: {e}")
-        
-        try:
-            # Wait for Step 5 to complete and handle any errors
             future_coverage.result()
+            logger.info(f"Step 5 (base-oriented analysis) completed successfully for {species}.")
         except Exception as e:
-            logging.error(f"Step 5 (coverage analysis) execution failed: {e}")
+            logger.error(f"Step 5 (base-oriented analysis) failed: {e}")
+            sys.exit(1)
         
         try:
-            # Wait for Step 6 to complete and handle any errors
             future_cigar.result()
+            logger.info(f"Step 6 (read-oriented analysis) completed successfully for {species}.")
         except Exception as e:
-            logging.error(f"Step 6 (CIGAR processing) execution failed: {e}")
+            logger.error(f"Step 6 (read-oriented analysis) failed: {e}")
+            sys.exit(1)
 
 
 def run_pipeline(args):
@@ -122,7 +113,8 @@ def run_pipeline(args):
         igdetective_home = None  # Set igdetective_home to None because customIG is provided
         customIG = args.customIG
 
-    configure_logging(home)
+    log_dir = os.path.join(home, 'closeread_logs')
+    setup_global_logging(log_dir, level="INFO", console=True)
 
     # Validate input directories
     for dir_path, dir_name in [
@@ -130,48 +122,50 @@ def run_pipeline(args):
         (f"{home}/{fastqdir}", "FASTQ directory"),
     ]:
         if not os.path.exists(dir_path):
-            logging.error(f"{dir_name} not found: {dir_path}")
+            print(f"{dir_name} not found: {dir_path}")
             raise FileNotFoundError(f"{dir_name} not found: {dir_path}")
 
-    logging.info("Starting the pipeline...")
-
     for species in species_list:
-        logging.info(f"Processing species: {species}")
+        logger.info(f'=== Starting pipeline for {species} ===')
         try:
             # Step 1 and 2: Data Preparation and Loci Location
-            logging.info(f"Step 1 and Step 2: Running in parallel for {species}")
             run_flag = parallel_step_1_and_2(species, home, fastqdir, haploid, threads, igdetective_home)
 
             # Step 3: Convert Primary BAM
             output_primary_bam = os.path.join(home, "aligned_bam", species, f"{species}_merged_sorted_primary.bam")
             output_primary_index = f"{output_primary_bam}.csi"
             if not os.path.exists(output_primary_bam) or not os.path.exists(output_primary_index) or run_flag:
-                logging.info(f"Step 3: Convert Primary BAM for {species}")
+                logger.info(f"Step 3: Select only primary alignments for {species}")
                 convert_primary_bam(species, home, threads)
+                logger.info(f"Step 3 [Select Primary alignments] completed successfully for {species}.")
             else:
-                logging.info(f"Step 3: Output exists, skipping Convert Primary BAM for {species} bc already completed")
+                logger.info(f"Skipping Step 3: Output exists for {species}. If rerun is needed, delete files in aligned_bam/{species} folder.")
 
             # Step 4: Final IG Loci
             if args.igdetective_home:
-                logging.info(f"Step 4: Final IG Loci for {species}")
+                logger.info(f"Step 4: Compute IG Loci position file for {species}")
                 final_ig_loci(species, home)
+                logger.info(f"Step 4 [Compute IG Loci] completed successfully for {species}.")
+            else:
+                logger.info(f"Skipping Step 4: Custom IG file provided for {species}")
 
             # Step 5 + 6: Coverage Analysis and CIGAR Processing
-            logging.info(f"Step 5 and Step 6: Running in parallel for {species}")
             if args.igdetective_home:
+                logger.info(f"Using IG loci found by Igdetetive for {species}")
                 annotation = os.path.join(home, "gene_position", f"{species}.final.Ig_loci.txt")
             else:
+                logger.info(f"Using provided custom IG loci for {species}")
                 annotation = os.path.join(customIG, f"{species}.customIG.txt")
 
             process_steps_in_parallel(species, home, annotation)
 
-            logging.info(f"Species {species} processed successfully!")
+            logger.info(f"{species} processed successfully!")
 
         except Exception as e:
-            logging.error(f"Error processing species {species}: {e}", exc_info=True)
+            logger.error(f"Error processing species {species}: {e}", exc_info=True)
             sys.exit(1)  # Exit with error code
 
-    logging.info("Pipeline completed!")
+    logger.info("Pipeline completed!")
 
 
 
