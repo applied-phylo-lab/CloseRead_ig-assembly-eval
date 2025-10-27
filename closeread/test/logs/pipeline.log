@@ -1,2 +1,0 @@
-2025-07-21 19:47:10,832 - INFO - Logging initialized. Logs will be written to test/logs/pipeline.log
-2025-07-21 19:47:10,833 - ERROR - FASTQ directory not found: test//hifi_fastq
