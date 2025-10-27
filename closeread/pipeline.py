@@ -15,17 +15,25 @@ def resolve_path(path):
     return os.path.abspath(os.path.expanduser(path))
 
 def run_pipeline_cli():
-    parser = argparse.ArgumentParser(description="Run the CloseRead pipeline.")
-    parser.add_argument("--species", required=True, help="Comma-separated list of species (e.g., species1,species2).")
-    parser.add_argument("--home", required=True, type=resolve_path, help="Path to the home directory.")
-    parser.add_argument("--haploid", required=True, help="Haploid status (True or False).")
-    parser.add_argument("--fastqdir", required=True, type=str, help="Path to the FASTQ directory.")
-    parser.add_argument("--t", required=False, default=32, type=int, help="# of threads to use (default: 32).")
 
+    parser = argparse.ArgumentParser( description="Run the CloseRead pipeline.", add_help=False)
+    parser.add_argument('--help', action='help', help='Show this help message and exit')
+    parser.add_argument("-s", "--species", required=True, help="Comma-separated list of species (e.g., species1,species2).")
+    parser.add_argument("-d", "--home", required=True, type=resolve_path, help="Path to the working directory.")
+    parser.add_argument("-h", "--haploid", required=True, help="Haploid status (True or False).")
+    parser.add_argument("-fq", "--fastqdir", required=True, type=str, help="Path to the FASTQ directory.")
+    parser.add_argument("-t", "--threads", required=False, default=32, type=int, help="# of threads to use (default: 32).",dest="t")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--igdetective_home', type=resolve_path, help="Path to the IGDetective directory.")
-    group.add_argument('--customIG', type=resolve_path, help="Path to directory containing ${species_name}.customIG.txt.")
-
+    group.add_argument(
+        '-ig', '--igdetective_home', 
+        type=resolve_path, 
+        help="Path to the IGDetective directory."
+    )
+    group.add_argument(
+        '-cig', '--customIG', 
+        type=str, 
+        help="Path to directory containing ${species_name}.customIG.txt."
+    )
     args = parser.parse_args()
     run_pipeline(args)
 
@@ -120,7 +128,7 @@ def run_pipeline(args):
         customIG = None  # Set customIG to None because igdetective_home is provided
     else:
         igdetective_home = None  # Set igdetective_home to None because customIG is provided
-        customIG = args.customIG
+        customIG = os.path.join(home, args.customIG) 
 
     configure_logging(home)
 
@@ -172,6 +180,7 @@ def run_pipeline(args):
             sys.exit(1)  # Exit with error code
 
     logging.info("Pipeline completed!")
+
 
 
 

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="closeread",
-    version="0.1.0",
+    version="1.2.1",
     author="Yixin Zhu",
     author_email="yz3398@cornell.edu",
     description="CloseRead: A pipeline for evaluating IG assemblies.",

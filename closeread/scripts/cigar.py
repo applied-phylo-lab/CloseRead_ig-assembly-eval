@@ -33,15 +33,15 @@ def process_bam_file(bam_file_path, region_list_IGH, region_list_IGK, region_lis
     """ Process a BAM file to estimate mismatches for each read. """
     # Output file names
     output_file_names = [os.path.join(output_dir, "IGH.txt"), os.path.join(output_dir, "IGK.txt"), os.path.join(output_dir, "IGL.txt"), os.path.join(output_dir, "TRA.txt"), os.path.join(output_dir, "TRB.txt"), os.path.join(output_dir, "TRG.txt")]
-    non_overlap_file_name = os.path.join(output_dir,"nonIG.txt")
+    #non_overlap_file_name = os.path.join(output_dir,"nonIG.txt")
 
     # rm existing files
     [os.remove(file) for file in output_file_names if os.path.isfile(file)]
-    [os.remove(file) for file in non_overlap_file_name if os.path.isfile(file)]
+    #[os.remove(file) for file in non_overlap_file_name if os.path.isfile(file)]
 
     # Open output files
     output_files = [open(name, "w") for name in output_file_names]
-    non_overlap_file = open(non_overlap_file_name, "w")
+    #non_overlap_file = open(non_overlap_file_name, "w")
 
     treesIGH = {}
     treesIGK = {}
@@ -137,19 +137,17 @@ def process_bam_file(bam_file_path, region_list_IGH, region_list_IGK, region_lis
             else:
                 indel_rate = 0
             # Check for overlap with each BED file's intervals
-            found_overlap = False  # Flag to check if an overlap was found
             for i, tree_dict in enumerate(trees):
                 if chromosome in tree_dict and tree_dict[chromosome].overlaps(start, end):
                     output_files[i].write(f"{read_name}\t{chromosome}\t{start}\t{read_length}\t{mapping_quality}\t{mismatches}\t{mismatch_rate}\t{longindels}\t{total_indel_length}\t{indel_rate}\t{soft_clipping}\t{hard_clipping}\n")
-                    found_overlap = True
                     break
             # If no overlap was found, write to the non-overlapping file
-            if not found_overlap:
-                non_overlap_file.write(f"{read_name}\t{chromosome}\t{start}\t{read_length}\t{mapping_quality}\t{mismatches}\t{mismatch_rate}\t{longindels}\t{total_indel_length}\t{indel_rate}\t{soft_clipping}\t{hard_clipping}\n")
+            #if not found_overlap:
+            #    non_overlap_file.write(f"{read_name}\t{chromosome}\t{start}\t{read_length}\t{mapping_quality}\t{mismatches}\t{mismatch_rate}\t{longindels}\t{total_indel_length}\t{indel_rate}\t{soft_clipping}\t{hard_clipping}\n")
     bamfile.close()
     for file in output_files:
         file.close()
-    non_overlap_file.close()
+    #non_overlap_file.close()
 
 
 def main():

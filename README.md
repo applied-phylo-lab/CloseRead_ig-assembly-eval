@@ -68,7 +68,7 @@ closeread-plot --s test --g IGH --home test/ --pg test/igGene/test.pri.igdetecti
 
 #### Required Files:
 Place the following files in the specified directories (replace placeholders with your species name):
-- **HiFi FASTQ/BAM Files:**  
+- **HiFi Fastq/Fastq.gz/Fq/BAM Files:**  
   Located at:  
   ```
   $HOME/$fastqdir/$species_name/
@@ -173,7 +173,6 @@ The pipeline produces intermediate statistics files in `{HOME}/errorStats/`. Typ
 Other outputs include:
 - **Aligned Files:**
   - BAM files in `{HOME}/aligned_bam/{species}/` (both full and filtered (primary-only) alignments).
-  - SAM files in `{HOME}/aligned_sam/{species}/`.
 - **IgDetective Results:**
   - Stored in `{HOME}/igGene/{species}.{pri/alt}.igdetective/`.
 - **IG Loci Positions:**
@@ -220,8 +219,6 @@ $HOME/
 │   ├── mEubGla1.alt.fasta
 │   ├── mEubGla1.alt.fasta.fai
 ├── $fastqdir/           # FASTQ/BAM files directory
-│   └── mEubGla1/
-├── aligned_sam/         # Aligned SAM files
 │   └── mEubGla1/
 ├── aligned_bam/         # Aligned BAM files
 │   └── mEubGla1/

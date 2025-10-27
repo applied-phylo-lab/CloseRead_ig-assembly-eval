@@ -73,7 +73,7 @@ def run_plot(args):
                 alt_pileup = process_pileup(alt_pileup_file)
                 haploid = False
             else:
-                print(f"Haploit = True : Alternate mpileup file not found: {alt_pileup_file}")
+                #print(f"Haploit = True : Alternate mpileup file not found: {alt_pileup_file}")
                 alt_pileup = None
                 haploid = True
                 chr2 = None
@@ -221,7 +221,7 @@ def run_plot(args):
                         make_pdf(image_files, output_filename, species, CommonName, LatinName, hapkind, Source, overlapx=0.7, overlapy=0.01, scale_top=0.6, scale_bottom=0.3)
             if args.pg:
                 genelevel_result = process_gene_data(gene_file=args.pg, merged_pileup=merged_pileup, read=read)
-                outFile = f"{dirOut}/{species}.{gene}.genelevel.csv"
+                outFile = f"{dirOut}/{species}.{gene}.genelevel.tsv"
                 genelevel_result.to_csv(outFile, sep='\t')
                 print("gene level read support computed!")
 

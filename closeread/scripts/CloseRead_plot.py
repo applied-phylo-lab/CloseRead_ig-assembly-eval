@@ -289,10 +289,30 @@ def plot_mismatch_coverage(pileup, bin_count, positions, start_indices, end_indi
     cmap (str): Colormap for the heatmap.
     """
 
-    # Set plotting options
+# Set plotting options
     mpl.rcParams['agg.path.chunksize'] = 1000000000
     plt.rcParams["font.weight"] = "bold"
     plt.rcParams["axes.labelweight"] = "bold"
+
+    # --- DOWNSAMPLING ---
+    # Let's subsample the data if it's too large.
+    
+    num_points = len(pileup)
+    max_plot_points = 1500000  # A safe upper limit 
+
+    if num_points > max_plot_points:
+        step = max(1, num_points // max_plot_points)
+        binner = np.arange(num_points) // step
+        print(f"Warning: Data has {num_points} points. Binning into "
+              f"{len(np.unique(binner))} groups with median to avoid render errors.")
+        plot_pileup = pileup.groupby(binner).agg(
+            # For X-axis: Use the average position in the bin
+            Pos=('Pos', 'mean'),  
+            # For Y-axis: Use the median value in the bin
+            PercentCorrect=('PercentCorrect', 'median') 
+        ).reset_index(drop=True)
+    else:
+        plot_pileup = pileup
 
     # Set up subplots
     fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(20, 3), gridspec_kw={'height_ratios': [1, 3]})
@@ -309,15 +329,39 @@ def plot_mismatch_coverage(pileup, bin_count, positions, start_indices, end_indi
             axes[1].axvspan(start, end, facecolor='purple', alpha=0.7, zorder=3)
 
     # Plot percentage of mismatches per position
-    axes[1].fill_between(pileup['Pos'], 100 - pileup['PercentCorrect'], step="mid", 
-                         alpha=1, color=chr_color, zorder=2)
+    try:
+        # Try the high-quality vector-heavy method first
+        axes[1].fill_between(plot_pileup['Pos'], 100 - plot_pileup['PercentCorrect'], step="mid", 
+                             alpha=1, color=chr_color, zorder=2, rasterized=True)
+    except Exception as e:
+        # If it fails (e.g., too many data points), fall back to the rasterized version
+        print(f"Warning: 'fill_between' failed with error: {e}. "
+              "Falling back to rasterized 'plot'.")
+        axes[1].plot(
+            plot_pileup['Pos'], 
+            100 - plot_pileup['PercentCorrect'], 
+            alpha=1, 
+            color=chr_color, 
+            zorder=2,
+            rasterized=True,  # Use the rasterized option
+            marker=None
+        )
 
     # Create heatmap for poorly supported percentage
     data_matrix = np.array(100 - bin_count["wellCount percent"])[np.newaxis]
-    sns.heatmap(data_matrix, ax=axes[0], annot=False, cbar=False, yticklabels=False, cmap=cmap, 
-                vmin=0, vmax=50, xticklabels=False)
+    try:
+        sns.heatmap(data_matrix, ax=axes[0], annot=False, cbar=False, yticklabels=False, cmap=cmap, 
+                    vmin=0, vmax=50, xticklabels=False)
+    except Exception as e:
+        axes[0].imshow(
+                        data_matrix,
+                        aspect='auto',
+                        origin='lower',
+                        vmin=0, vmax=50,
+                        cmap=cmap,
+                        interpolation='nearest'
+                    )
 
-    # Customize spines for the heatmap
     for spine in axes[0].spines.values():
         spine.set_visible(True)
 
@@ -329,10 +373,14 @@ def plot_mismatch_coverage(pileup, bin_count, positions, start_indices, end_indi
     axes[1].set_ylim(0, 101)
     axes[1].set_xlim(min_position, max_position)
 
-    # Adjust layout and margins
-    plt.tight_layout()
+    fig.tight_layout()
     axes[1].margins(x=0)
 
     # Save the plot
-    plt.savefig(f'{dirOut}/{gene}.{chr_label}.basecoverage.PerCorrect.png', format="png", dpi=300, bbox_inches='tight')
-    plt.show()
+    try:
+        fig.savefig(f'{dirOut}/{gene}.{chr_label}.basecoverage.PerCorrect.png', format="png", dpi=300, bbox_inches='tight')
+    except Exception as e:
+        print(f"Warning: 'savefig' with bbox_inches='tight' failed: {e}. Saving without it.")
+        fig.savefig(f'{dirOut}/{gene}.{chr_label}.basecoverage.PerCorrect.png', format="png", dpi=300)
+    
+    plt.close(fig) # Close the figure to free up memory
