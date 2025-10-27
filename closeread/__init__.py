@@ -20,5 +20,4 @@ __all__ = [
     "coverage_analysis",
 ]
 
-
 __version__ = "1.2.1"

@@ -1,12 +1,11 @@
 import subprocess
 import os
 from datetime import datetime
+import logging
+logger = logging.getLogger(__name__)
 
 def cigar_processing(species, home, annotation):
     """Process CIGAR data."""
-    # Define log file path
-    log_file = os.path.join(home, "logs", f"{species}_cigar_processing.log")
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
     # Define paths for script and input files
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -16,34 +15,35 @@ def cigar_processing(species, home, annotation):
     error_dir = os.path.join(home, "errorStats", species)
     os.makedirs(error_dir, exist_ok=True)
 
-    # Open log file and execute the subprocess
-    with open(log_file, "w") as log:
-        try:
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Starting CIGAR processing for species: {species}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - BAM file: {bam}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Annotation file: {annotation}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - errorStats directory: {error_dir}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Running script: python {script} {bam} {annotation} {species} {error_dir}\n")
-            log.flush()
-            # Run the script
-            subprocess.run(
-                [
-                    "python",
-                    script,
-                    bam,
-                    annotation,
-                    species,
-                    error_dir,
-                ],
-                stdout=log,
-                stderr=log,
-                check=True,
-            )
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - CIGAR processing completed successfully for species: {species}\n")
+    try:
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Starting CIGAR processing for species: {species}")
+        # Run the script
+        res = subprocess.run(
+            [
+                "python",
+                script,
+                bam,
+                annotation,
+                species,
+                error_dir,
+            ],
+            text=True,
+            capture_output=True,
+            check=True
+        )
+        if res.stdout:
+            logger.info("[read-oriented analysis stdout]\n%s", res.stdout.strip())
+        if res.stderr:
+            logger.info("[read-oriented analysis stderr]\n%s", res.stderr.strip())
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - read-oriented analysis completed successfully for species: {species}")
 
-        except subprocess.CalledProcessError as e:
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Error during CIGAR processing: {e}\n")
-            raise RuntimeError(f"Failed to process CIGAR data for species {species}. Check the log: {log_file}") from e
+    except subprocess.CalledProcessError as e:
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Error during read-oriented analysis: {e}")
+        if e.stdout:
+            logger.error("[read-oriented analysis stdout]\n%s", e.stdout.strip())
+        if e.stderr:
+            logger.error("[read-oriented analysis stderr]\n%s", e.stderr.strip())
+        raise RuntimeError(f"Failed read-oriented analysis for species {species}.") from e
 
 
 if __name__ == "__main__":

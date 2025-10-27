@@ -1,12 +1,11 @@
 import subprocess
 import os
 from datetime import datetime
+import logging
+logger = logging.getLogger(__name__)
 
 def convert_primary_bam(species, home, threads):
     """Convert merged BAM to primary BAM."""
-    # Define the log file path
-    log_file = os.path.join(home, "logs", f"{species}_convert_primary_bam.log")
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
     # Define input and output file paths
     bam = os.path.join(home, "aligned_bam", species, f"{species}_merged_sorted.bam")
@@ -15,39 +14,46 @@ def convert_primary_bam(species, home, threads):
 
     # Skip step if output already exists
     if os.path.exists(output_bam) and os.path.exists(output_index):
-        with open(log_file, "a") as log:
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Primary BAM and index already exist: {output_bam}, {output_index}\n")
-            log.flush()
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Primary BAM and index already exist: {output_bam}, {output_index}")
         return
 
     # Run samtools commands and log output
-    with open(log_file, "w") as log:
-        try:
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Converting BAM to primary BAM for species: {species}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Input BAM: {bam}\n")
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Output BAM: {output_bam}\n")
-            log.flush()
-            # Run samtools view
-            subprocess.run(
-                ["samtools", "view", "-b", "-F", "0x800", "-F", "0x100", "-@", str(threads), bam, "-o", output_bam],
-                stdout=log,
-                stderr=log,
-                check=True,
-            )
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - samtools view completed successfully.\n")
-            log.flush()
-            # Run samtools index
-            subprocess.run(
-                ["samtools", "index", "-c", output_bam],
-                stdout=log,
-                stderr=log,
-                check=True,
-            )
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - samtools index completed successfully.\n")
+    try:
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Converting BAM to primary BAM for species: {species}")
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Input BAM: {bam}")
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Output BAM: {output_bam}")
+        # Run samtools view
+        res = subprocess.run(
+            ["samtools", "view", "-b", "-F", "0x800", "-F", "0x100", "-@", str(threads), bam, "-o", output_bam],
+            text=True,
+            capture_output=True,
+            check=True
+        )
+        if res.stdout:
+            logger.info("[samtools view stdout]\n%s", res.stdout.strip())
+        if res.stderr:
+            logger.info("[samtools view stderr]\n%s", res.stderr.strip())
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - samtools view completed successfully.")
+        # Run samtools index
+        res_index = subprocess.run(
+            ["samtools", "index", "-c", output_bam],
+            text=True,
+            capture_output=True,
+            check=True
+        )
+        if res_index.stdout:
+            logger.info("[samtools index stdout]\n%s", res_index.stdout.strip())
+        if res_index.stderr:
+            logger.info("[samtools index stderr]\n%s", res_index.stderr.strip())
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - samtools index completed successfully.")
 
-        except subprocess.CalledProcessError as e:
-            log.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Error during BAM conversion: {e}\n")
-            raise RuntimeError(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Failed to convert BAM for species {species}. Check the log: {log_file}") from e
+    except subprocess.CalledProcessError as e:
+        logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Error during BAM conversion: {e}")
+        if e.stdout:
+            logger.error("[samtools stdout]\n%s", e.stdout.strip())
+        if e.stderr:
+            logger.error("[samtools stderr]\n%s", e.stderr.strip())
+        raise RuntimeError(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Failed to convert BAM for species {species}.") from e
 
 
 if __name__ == "__main__":

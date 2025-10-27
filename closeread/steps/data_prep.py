@@ -1,18 +1,18 @@
 import os
 import subprocess
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 def data_prep(species, home, fastqdir, haploid, threads):
     """Run data preparation."""
-    # Define log file
-    log_file = os.path.join(home, "logs", f"{species}_data_prep.log")
-    os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
     # Define the script path
     current_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(current_dir)
     script = os.path.join(parent_dir, "scripts/dataPrepAutomated.sh")
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Running data preparation...")
+    logger.info(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Running data preparation...")
     # Build the command
     cmd = [
         script,
@@ -23,15 +23,26 @@ def data_prep(species, home, fastqdir, haploid, threads):
         "-t", threads
     ]
 
-    # Open log file for writing
-    with open(log_file, "w") as log:
-        # Run the command, redirecting stdout and stderr to the log file
-        try:
-            subprocess.run(cmd, stdout=log, stderr=log, check=True)
-            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Data preparation completed successfully. Logs are in {log_file}")
-        except subprocess.CalledProcessError as e:
-            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Data preparation failed. Check logs for details: {log_file}")
-            raise
+    # Run the command, redirecting stdout and stderr to the log file
+    try:
+        res = subprocess.run(cmd,
+                            text=True,
+                            capture_output=True,
+                            check=True)
+        if res.stdout:
+            logger.info("[minimap stdout]\n%s", res.stdout.strip())
+        if res.stderr:
+            logger.info("[minimap stderr]\n%s", res.stderr.strip())
+        logger.info("Data preparation completed successfully.")
+    except subprocess.CalledProcessError as e:
+        # Log at ERROR so it actually goes to pipeline.log
+        logger.error("Data preparation failed (exit code %s)", e.returncode)
+        if e.stdout:
+            logger.error("[minimap stdout]\n%s", e.stdout.strip())
+        if e.stderr:
+            logger.error("[minimap stderr]\n%s", e.stderr.strip())
+        raise
+
 
 if __name__ == "__main__":
     import argparse
