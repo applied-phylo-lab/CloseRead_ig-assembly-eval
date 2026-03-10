@@ -141,11 +141,12 @@ def run_plot(args):
     
             if not args.so:
                 #Plot read coverage across loci
+                clip = args.clip
                 plot_coverage(positions_pri, coverage_counts_pri, mid_counts_pri, zero_counts_pri, start_indices_pri,
-                            end_indices_pri, high_mismatch_bool_pri.size, start_break_pri, end_break_pri, min_position_pri, max_position_pri, chr1, gene, dirOut)
+                            end_indices_pri, high_mismatch_bool_pri.size, start_break_pri, end_break_pri, min_position_pri, max_position_pri, chr1, gene, dirOut, clip=clip)
                 if not haploid:
                     plot_coverage(positions_alt, coverage_counts_alt, mid_counts_alt, zero_counts_alt, start_indices_alt, 
-                                end_indices_alt, high_mismatch_bool_alt.size, start_break_alt, end_break_alt, min_position_alt, max_position_alt, chr2, gene, dirOut)
+                                end_indices_alt, high_mismatch_bool_alt.size, start_break_alt, end_break_alt, min_position_alt, max_position_alt, chr2, gene, dirOut, clip=clip)
     
             #Compute basepair mismatch
             bin_count = calculate_bin_counts(pri_pileup, baseview_correct_threshold=80, bin_size=1000)
@@ -259,7 +260,8 @@ def run_plot_cli():
     parser.add_argument('--m', type=resolve_path, metavar="meta", help="Path to the meta information .csv file, used for generating PDF.")
     parser.add_argument('--so', action='store_true', help="Output .txt and .csv files only, skip visualization.")
     parser.add_argument('--pg', type=resolve_path, metavar="gene_level assessment", help="Path for gene level annotation file, to generate gene-level read support information.")
-
+    parser.add_argument('--clip', action='store_true', help="Enable automatic coverage clipping for plots")
+    
     args = parser.parse_args()
     if not args.s and not args.sf:
         parser.error("You must provide either --s (single species) or --sf (species file).")
