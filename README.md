@@ -137,7 +137,7 @@ After running the evaluation pipeline, generate visualizations with `closeread-p
 closeread-plot [OPTIONS]
 usage: closeread-plot [-h] (--s species | --sf species_file) --g gene --home home [--cov lowCov_threshold]
                       [--p padding] [--re single_read_error] [--rc readview_correct_threshold] [--bc baseview_correct_threshold] [--m meta]
-                      [--so stats_only] [--pg gene_level assessment]
+                      [--so stats_only] [--pg gene_level assessment] [--clip]
 ```
 #### Key Options:
 - `--s`: Single species identifier (use this if providing one species) or `--sf` for a file containing a list of species.
@@ -152,6 +152,7 @@ usage: closeread-plot [-h] (--s species | --sf species_file) --g gene --home hom
   - `--m`: Path to the meta-information CSV file (for generating a PDF report)
   - `--so`: Generate statistics only (skip visualization)
   - `--pg`: Path for a gene-level annotation file (to produce gene-level assessments)
+  - `--clip`: Automatically clip the y-axis of coverage plots when extreme spikes would otherwise dominate the scale.
 
 
 ## Outputs
