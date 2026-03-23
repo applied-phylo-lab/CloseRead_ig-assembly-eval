@@ -200,7 +200,8 @@ def plot_coverage(
     max_position, 
     chr_label, 
     gene, 
-    dirOut, 
+    dirOut,
+    clip,
     color60="#BBBBBB", 
     colormid="#EECC66", 
     color0="#BB5566"
@@ -251,6 +252,67 @@ def plot_coverage(
     axes.fill_between(positions, mid_counts, step="pre", alpha=0.9, label='MapQ = 1~59', facecolor=colormid, zorder=0.5)
     axes.fill_between(positions, zero_counts, step="pre", alpha=0.5, label='MapQ = 0', facecolor=color0, zorder=0.5)
 
+    if clip == True:
+        ##### Y-axis clipping to avoid extreme spikes within the coverage plots #####
+        # At the moment the script decide when clipping is needed.
+        # However, maybe we can make a --clip flag in finalize_plot.py. If that flag is true, the script will clip the results, and if not it will go on with default settings.
+        total_cov = np.maximum.reduce([
+            np.asarray(coverage_counts),
+            np.asarray(mid_counts),
+            np.asarray(zero_counts),
+        ])
+
+        # Use non-zero coverage positions for stability
+        nz = total_cov[total_cov > 0]
+        do_clip = False
+
+        if nz.size >= 20:  # need enough measurements to make SD meaningful
+            mean = float(np.mean(nz))
+            sd = float(np.std(nz))
+            median = float(np.median(nz))
+            maxv = float(np.max(nz))
+
+            # Calculate coefficient of variation (CV)
+            cv = sd / mean if mean > 0 else float("inf")
+            spike_ratio = maxv / median
+
+            # Trigger clipping when variability is too high
+            # Tune CV threshold is 1.0 at the moment, however, it could be changed
+            if (cv > 1.0) or (spike_ratio > 8):
+                do_clip = True
+
+        if do_clip:
+            # Choose a upper limit so typical peaks still show
+            ymax = float(np.percentile(nz,
+                                       99))  # Peaks larger than 99% of nz will be clipped this could be changed to 99.5 for less clipping.
+            ymax = max(10.0,
+                       ymax * 1.10)  # The y-axis will be 10% above the largest peak (of those <99%), can also be increased or decreased.
+
+            band_frac = 0.04  # Will result in the white line below the graph. Which the default graphs have.
+            ymin = - (band_frac / (1 - band_frac)) * ymax
+
+            axes.set_ylim(ymin, ymax)
+
+            # Mark clipped points
+            clipped = total_cov > ymax
+            if np.any(clipped):
+                axes.plot(np.asarray(positions)[clipped],
+                          np.full(np.sum(clipped), ymax),
+                          linestyle="None", marker="|", markersize=6,
+                          color="black", alpha=0.7)
+                # Will give the CV in the graph, as extra information
+                axes.text(0.995, 0.98, f"y clipped (CV={cv:.2f})",
+                          transform=axes.transAxes,
+                          ha="right", va="top", fontsize=8, alpha=0.8)
+
+        else:
+            # Keep default autoscaling
+            pass
+    else:
+        pass
+
+    ##### Back to the default script #####
+    
     # Plot details
     axes.set_title(f'Coverage by Reads in {chr_label}', fontweight='bold', size=12)
     axes.set_xlabel('Genomic Position')
@@ -261,8 +323,10 @@ def plot_coverage(
     CovPlt.legend(loc="center right", bbox_to_anchor=(1.1, 0.5), frameon=False)
 
     # Save the plot
-    plt.tight_layout()
-    plt.savefig(f'{dirOut}/{gene}.{chr_label}.readcoverage.all.png', format="png", dpi=300, bbox_inches='tight')
+    if clip == True:
+        plt.savefig(f'{dirOut}/{gene}.{chr_label}.clipped.readcoverage.all.png', format="png", dpi=300, bbox_inches='tight')
+    else:
+        plt.savefig(f'{dirOut}/{gene}.{chr_label}.readcoverage.all.png', format="png", dpi=300, bbox_inches='tight')
     plt.show()
 
 
