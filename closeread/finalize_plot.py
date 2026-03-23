@@ -260,7 +260,7 @@ def run_plot_cli():
     parser.add_argument('--m', type=resolve_path, metavar="meta", help="Path to the meta information .csv file, used for generating PDF.")
     parser.add_argument('--so', action='store_true', help="Output .txt and .csv files only, skip visualization.")
     parser.add_argument('--pg', type=resolve_path, metavar="gene_level assessment", help="Path for gene level annotation file, to generate gene-level read support information.")
-    parser.add_argument('--clip', action='store_true', help="Enable automatic coverage clipping for plots")
+    parser.add_argument('--clip', action='store_true', help="Automatically clip the y-axis of coverage plots when extreme spikes would otherwise dominate the scale.")
     
     args = parser.parse_args()
     if not args.s and not args.sf:

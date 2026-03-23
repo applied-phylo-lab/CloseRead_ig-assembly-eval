@@ -3,3 +3,16 @@ dist/
 *.egg-info/
 .eggs/
 __pycache__
+# Ignore everything under test/
+test/*
+
+# Keep assemblies and all contents
+!test/assemblies/
+!test/assemblies/**
+
+# Keep hifi_fastq and all contents
+!test/hifi_fastq/
+!test/hifi_fastq/**
+
+# But ignore this specific file
+test/hifi_fastq/test/test_merged.fastq
