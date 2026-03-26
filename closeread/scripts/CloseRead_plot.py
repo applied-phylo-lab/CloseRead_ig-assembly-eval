@@ -352,8 +352,8 @@ def plot_mismatch_coverage(pileup, bin_count, positions, start_indices, end_indi
     dirOut (str): Output directory for saving the plot.
     cmap (str): Colormap for the heatmap.
     """
-
-# Set plotting options
+    
+    # Set plotting options
     mpl.rcParams['agg.path.chunksize'] = 1000000000
     plt.rcParams["font.weight"] = "bold"
     plt.rcParams["axes.labelweight"] = "bold"
@@ -362,7 +362,7 @@ def plot_mismatch_coverage(pileup, bin_count, positions, start_indices, end_indi
     # Let's subsample the data if it's too large.
     
     num_points = len(pileup)
-    max_plot_points = 1500000  # A safe upper limit 
+    max_plot_points = 1000000  # A safe upper limit 
 
     if num_points > max_plot_points:
         step = max(1, num_points // max_plot_points)
